@@ -14,8 +14,8 @@
 
     var r = new XMLHttpRequest();
 
-    var mapping = function (v) {
-      v = Math.abs(v / 32);
+    var mapping = function (v, n) {
+      v = Math.abs(v / Math.sqrt(n));
 
       var b = Math.sqrt(Math.sqrt(v))
       var g = v;
@@ -39,22 +39,32 @@
         console.log("done.");
         var l = buffer.getChannelData(0);
         //var r = buffer.getChannelData(1);
-        var sliceSize = parseInt(l.length / 1024);
-        var iData = new Uint8ClampedArray(1024 * 1024 * 2);
-        for (var s = 0; s < 1024; s++) {
+        var wi = 1024;
+        var blocklen = 2048;
+        //wi = Math.floor(l.length / blocklen); at your own fucking risk m8
+        console.log(wi);
+        var he = blocklen / 2;
+        var sliceSize = parseInt(l.length / wi);
+        var iData = new Uint8ClampedArray(wi * he * 4);
+        for (var s = 0; s < wi; s++) {
           var pos = s * sliceSize;
           if (pos > l.length) break;
-          var freqs = fft(l.slice(pos, pos + 1024))[0];
-          for (var s2 = 0; s2 < 512; s2++) {
-            var idp = (1024 * s2 + s) * 4;
-            var v = mapping(freqs[s2 + 512]);
+          var freqs = fft(l.slice(pos, pos + blocklen))[0];
+          for (var s2 = 0; s2 < he; s2++) {
+            var idp = 4 * (s2 * wi + s);
+            var v = mapping(freqs[s2 + he], blocklen);
             iData[idp] = v.r;
             iData[idp + 1] = v.g;
             iData[idp + 2] = v.b;
             iData[idp + 3] = 255;
           }
         }
-        cc.putImageData(new ImageData(iData, 1024, 512), 0, 0);
+        cc.canvas.height = he;
+        cc.canvas.width = wi;
+        cc.putImageData(new ImageData(iData, wi, he), 0, 0);
+        cc.canvas.toBlob(function (a) {
+          console.log(URL.createObjectURL(a));
+        }, "image/jpeg", .9);
       });
 
     }
