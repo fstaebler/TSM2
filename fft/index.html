@@ -1,0 +1,66 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <script type="text/ecmascript" src="fft.js"></script>
+</head>
+
+<body>
+  <canvas height="512px" width="1024px"></canvas>
+  <script type="text/ecmascript">
+    var c = new AudioContext();
+    var cc = document.getElementsByTagName("canvas")[0].getContext("2d");
+
+    var r = new XMLHttpRequest();
+
+    var mapping = function (v) {
+      v = Math.abs(v / 32);
+
+      var b = Math.sqrt(Math.sqrt(v))
+      var g = v;
+      var r = g * g * g * g;
+
+      return {
+        r: r * 255,
+        g: g * 255,
+        b: b * 255
+      };
+    }
+
+    r.open("GET", "Camo & Krooked - Dreamcatcher (feat. Lemaitre)-113210779.mp3", true);
+
+    r.responseType = "arraybuffer";
+    console.log("downloading...");
+
+    r.onload = function () {
+      console.log("decoding...");
+      c.decodeAudioData(r.response, function (buffer) {
+        console.log("done.");
+        var l = buffer.getChannelData(0);
+        //var r = buffer.getChannelData(1);
+        var sliceSize = parseInt(l.length / 1024);
+        var iData = new Uint8ClampedArray(1024 * 1024 * 2);
+        for (var s = 0; s < 1024; s++) {
+          var pos = s * sliceSize;
+          if (pos > l.length) break;
+          var freqs = fft(l.slice(pos, pos + 1024))[0];
+          for (var s2 = 0; s2 < 512; s2++) {
+            var idp = (1024 * s2 + s) * 4;
+            var v = mapping(freqs[s2 + 512]);
+            iData[idp] = v.r;
+            iData[idp + 1] = v.g;
+            iData[idp + 2] = v.b;
+            iData[idp + 3] = 255;
+          }
+        }
+        cc.putImageData(new ImageData(iData, 1024, 512), 0, 0);
+      });
+
+    }
+    r.send();
+  </script>
+
+</body>
+
+</html>
