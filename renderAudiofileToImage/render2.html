@@ -1,0 +1,113 @@
+<html>
+<head>
+   <meta charset="utf-8">
+   <style>
+      body{
+         background-color: black;
+      }
+   </style>
+      <script type="text/javascript" src="fft3.js"></script>
+</head>
+<body>
+
+   <script type="text/javascript">
+      console.log('blubb');
+      var deltaT = 0.1;
+
+      var imageArray;
+      var imageWidth;
+      var imageHeight;
+      var starttime = new Date().getTime();
+      var eventsfired;
+
+      //Create normal audio context for decoding the file
+      var ctx = new AudioContext();
+      //Load file via Ajax
+      var req = new XMLHttpRequest();
+      req.open('GET', 'Grabbitz_Better_With_Time.mp3', true);
+      req.responseType = 'arraybuffer';
+      req.onload = function(){
+        console.log("loaded file");
+          ctx.decodeAudioData(this.response, //Decode file to AudioBuffer
+           function(buffer){
+             console.log("decoded file")
+             //Create fft
+             console.log("creating fft");
+             var N = 1024;
+             //var fft = init_fft(N, false);
+             //Create image
+             imageWidth = N;
+             imageHeight = parseInt(buffer.duration / deltaT);
+             console.log('buffer duration: ' + buffer.duration);
+             var imageSize = 4 * imageWidth * imageHeight;
+             console.log('image size: ' + imageSize + ' bytes');
+             var imageData = new ImageData(imageWidth, imageHeight);
+             var imageArray = imageData.data;
+             var position = 0;
+             //Prepare rendering
+             var data = buffer.getChannelData(0);
+
+             var lastUpdate = 0;
+             eventsfired = 0;
+             var imaginaryData = [];
+             for(var i = 0; i < N; i++){
+                imaginaryData[i] = 0;
+             }
+             //Render
+             for(var i = 0; i < data.length; i += N){
+                var currentTime = buffer.duration * (i / buffer.length);
+                if((currentTime >= (lastUpdate + deltaT)) || (lastUpdate == 0)){
+                   eventsfired++;
+                   lastUpdate = currentTime;
+                   var rawData = [];
+                   for(var q = 0; q < N; q++){
+                      rawData[q] = data[q + i];
+                   }
+                   //var rawData = data.slice(i,i + N + 1);
+                   /*for(var q = 0; q < rawData.length; q++){
+                      if(isNaN(rawData[q])){
+                         console.log(i + " is NaN");
+                         return null;
+                      }
+                   }
+                   console.log("nothing is null of " + rawData.length + " elements");*/
+                   //console.log(cfft(rawData));
+                   //var fftData = fft(rawData, imaginaryData)[0];
+                   var fftData = absolute(cfft(rawData));
+                   if(isNaN(fftData[0])){
+                      console.log(fftData);
+                      return null;
+                   }
+                   var rowsum = 0;
+                   for(var i = 0; i < N; i++){
+                      imageArray[position + (i * 4) + 0] = 0;//R
+                      imageArray[position + (i * 4) + 1] = 0;//G
+                      imageArray[position + (i * 4) + 2] = fftData[i];//B
+                      imageArray[position + (i * 4) + 3] = fftData[i] > 0 ? 0xFF : 0;
+                      rowsum += fftData[i];
+                      //if(isNaN(fftData[i])){console.log("fftData is NaN at " + i);}
+                   }
+                   //console.log(rowsum);
+                   position += (N * 4);
+               }
+             }
+
+                console.log('eventsfired = ' + eventsfired);
+                console.log('necessary events = ' + imageHeight);
+                console.log('rendering finished');
+                var canvas = document.createElement('canvas');
+                canvas.setAttribute('width', imageWidth + 'px');
+                canvas.setAttribute('height', imageHeight + 'px')
+                document.body.appendChild(canvas);
+                var gctx = canvas.getContext('2d');
+                gctx.putImageData(imageData, 0,0);
+
+                var endtime = new Date().getTime() - starttime;
+                console.log('done after ' + endtime + 'ms');
+        });
+      };
+      req.send();
+
+   </script>
+</body>
+</html>

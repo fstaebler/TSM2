@@ -1,0 +1,129 @@
+<html>
+<head>
+   <meta charset="utf-8">
+   <style>
+      body{
+         background-color: black;
+      }
+   </style>
+</head>
+<body>
+   <script type="text/javascript">
+      var deltaT = 0.1;
+
+      var imageArray;
+      var imageWidth;
+      var imageHeight;
+      var eventsfired;
+      var eventsaccepted;
+      var starttime = new Date().getTime();
+      var lastEvent;
+
+      //Create normal audio context for decoding the file
+      var ctx = new AudioContext();
+      //Load file via Ajax
+      var req = new XMLHttpRequest();
+      req.open('GET', 'Grabbitz_Better_With_Time.mp3', true);
+      req.responseType = 'arraybuffer';
+      req.onload = function(){
+        console.log("loaded file");
+          ctx.decodeAudioData(this.response, //Decode file to AudioBuffer
+           function(buffer){
+             console.log("decoded file")
+             console.log("creating offline audio context");
+             //Create offline context with same length as file
+             var octx = new OfflineAudioContext(buffer.numberOfChannels, buffer.length, buffer.sampleRate);
+             //Create buffer source with the audio data we just decoded
+             var buffersource = octx.createBufferSource();
+             buffersource.buffer = buffer;
+             //Create analyzer node
+             var analyzer = octx.createAnalyser(1,1);
+             analyzer.fftSize = 1024;
+             imageWidth = analyzer.frequencyBinCount;
+             var dataArray = new Uint8Array(imageWidth);
+             //Create script processor node for capturing timing events
+             //This is probably a great way to waste CPU cycles, but hey, whatever
+             var scriptNode = octx.createScriptProcessor(/*imageWidth*/);
+             imageHeight = parseInt(buffer.duration / deltaT);
+             console.log('buffer duration: ' + buffer.duration);
+             var imageSize = 4 * imageWidth * imageHeight;
+             console.log('image size: ' + imageSize + ' bytes');
+             var imageArray = new Uint8ClampedArray(imageSize);
+             var lastUpdate = 0;
+             var position = 0;
+             eventsfired = 0;
+             eventsaccepted = 0;
+             lastEvent = 0;
+             scriptNode.onaudioprocess = function(audioProcessingEvent){
+                eventsfired ++;
+                //Two things to happen here:
+                //1. See if the timing of the buffersource has progressed enough, so that we can render a new frame
+                //2. Maybe copy input over to output
+
+                /*if(lastUpdate == 0){
+                   console.log(audioProcessingEvent);
+                }*/
+
+
+               var currentTime = audioProcessingEvent.playbackTime;
+               //Just assumming the source fires events on the packets received, we can approximate time by
+               //var currentTime = buffer.duration * (audioProcessingEvent.inputBuffer / buffer.length);
+
+               if(currentTime > buffer.duration){
+                  if(currentTime < lastEvent){
+                        console.log('Events out of order!');
+                  }
+                  lastEvent = currentTime;
+               }
+
+                if((currentTime >= (lastUpdate + deltaT)) && (currentTime <= buffer.duration)){//Enough time has passed to render a new update
+                   lastUpdate = currentTime;
+                   analyzer.getByteFrequencyData(dataArray);
+                   for(var i = 0; i < dataArray.length; i++){
+                      imageArray[position + (i * 4) + 0] = 0;//R
+                      imageArray[position + (i * 4) + 1] = 0;//G
+                      imageArray[position + (i * 4) + 2] = dataArray[i];//B
+                      imageArray[position + (i * 4) + 3] = dataArray[i] > 0 ? 0xFF : 0;
+                   }
+                   position += (dataArray.length * 4);
+                   eventsaccepted ++;
+               }
+             };
+             buffersource.connect(scriptNode);
+             scriptNode.connect(analyzer);
+             analyzer.connect(octx.destination);
+             buffersource.start(0);
+             octx.oncomplete = function(){
+                console.log('lastEvent = ' + lastEvent);
+                console.log('eventsfired = ' + eventsfired);
+                console.log('eventsaccepted = ' + eventsaccepted);
+                console.log('necessary events = ' + imageHeight);
+                console.log('rendering finished');
+                var canvas = document.createElement('canvas');
+                canvas.setAttribute('width', imageWidth + 'px');
+                canvas.setAttribute('height', imageHeight + 'px')
+                document.body.appendChild(canvas);
+                var gctx = canvas.getContext('2d');
+                //gctx.rotate(Math.PI/2 * 3);
+                var imageData = new ImageData(imageArray, imageWidth);
+                /*window.createImageBitmap(imageData).then(function(bitmap){
+                   gctx.drawImage(bitmap, 0,0);
+                   document.body.appendChild(canvas);
+                   var endtime = new Date().getTime() - starttime;
+                   console.log('done after ' + endtime + 'ms');
+                });*/
+                gctx.putImageData(imageData, 0,0);
+
+                var endtime = new Date().getTime() - starttime;
+                console.log('done after ' + endtime + 'ms');
+             }
+             octx.startRendering();
+           }
+          , function(error){console.log(error)}
+        );
+      };
+      req.send();
+
+   </script>
+</body>
+</html>

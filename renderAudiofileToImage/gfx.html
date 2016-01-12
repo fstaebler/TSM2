@@ -1,0 +1,34 @@
+<html>
+<head>
+   <meta charset="utf-8">
+</head>
+<body>
+   <script type="text/javascript">
+      var imageSize = 4 * 200 * 200;
+      var imageData = new ImageData(200, 200);
+      var imageArray = imageData.data;
+            var y = 0;
+      for(var i = 0; i <200; i++){
+
+      for(var x = 0; x < 200; x++){
+         if(x % 10 == 0){
+            imageArray[y + (x * 4) + 0] = 0x0;
+            imageArray[y + (x * 4) + 1] = 0xFF;
+            imageArray[y + (x * 4) + 2] = 0xFF;
+            imageArray[y + (x * 4) + 3] = 0xFF;
+         }
+      }
+      y += 200 * 4;
+      }
+
+      var canvas = document.createElement('canvas');
+      //canvas.setAttribute('width', 200 + 'px');
+      //canvas.setAttribute('height', 200 + 'px')
+      canvas.style.width = '200px';
+      canvas.style.height = '200px';
+      var gctx = canvas.getContext('2d');
+      gctx.putImageData(imageData, 0,0);
+      document.body.appendChild(canvas);
+   </script>
+</body>
+</html>
