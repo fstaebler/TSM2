@@ -15,11 +15,12 @@
     var r = new XMLHttpRequest();
 
     var mapping = function (v, n) {
-      v = Math.abs(v / Math.sqrt(n));
+      var v2 = Math.sqrt(v[0] * v[0] + v[1] * v[1]);
+      v2 = Math.abs(v2 / Math.sqrt(n));
 
-      var b = Math.sqrt(Math.sqrt(v))
-      var g = v;
-      var r = g * g * g * g;
+      var b = Math.sqrt(Math.sqrt(v2))
+      var g = v2;
+      var r = v2 * v2 * v2 * v2;
 
       return {
         r: r * 255,
@@ -28,7 +29,7 @@
       };
     }
 
-    r.open("GET", "Camo & Krooked - Dreamcatcher (feat. Lemaitre)-113210779.mp3", true);
+    r.open("GET", "/testsongs/Camo & Krooked - Dreamcatcher (feat. Lemaitre)-113210779.mp3", true);
 
     r.responseType = "arraybuffer";
     console.log("downloading...");
@@ -39,9 +40,14 @@
         console.log("done.");
         var l = buffer.getChannelData(0);
         //var r = buffer.getChannelData(1);
+        var t1 = Date.now();
+        fft(l.slice(21434, 21434 + 4096));
+        console.log("took " + (Date.now() - t1));
+
+
         var wi = 1024;
         var blocklen = 2048;
-        //wi = Math.floor(l.length / blocklen); at your own fucking risk m8
+        wi = Math.floor(l.length / blocklen); //at your own fucking risk m8
         console.log(wi);
         var he = blocklen / 2;
         var sliceSize = parseInt(l.length / wi);
@@ -49,16 +55,18 @@
         for (var s = 0; s < wi; s++) {
           var pos = s * sliceSize;
           if (pos > l.length) break;
-          var freqs = fft(l.slice(pos, pos + blocklen))[0];
+          var freqs = fft(l.slice(pos, pos + blocklen));
           for (var s2 = 0; s2 < he; s2++) {
             var idp = 4 * (s2 * wi + s);
-            var v = mapping(freqs[s2 + he], blocklen);
+            var v = mapping([freqs[0][s2 + he], freqs[1][s2 + he]], blocklen);
             iData[idp] = v.r;
             iData[idp + 1] = v.g;
             iData[idp + 2] = v.b;
             iData[idp + 3] = 255;
           }
         }
+
+
         cc.canvas.height = he;
         cc.canvas.width = wi;
         cc.putImageData(new ImageData(iData, wi, he), 0, 0);
@@ -66,7 +74,6 @@
           console.log(URL.createObjectURL(a));
         }, "image/jpeg", .9);
       });
-
     }
     r.send();
   </script>

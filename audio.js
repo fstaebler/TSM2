@@ -60,12 +60,25 @@ var t = 0;
 
 p.onaudioprocess = function (e) {
   var o = e.outputBuffer;
-  for (var synthIndex = 0; synthIndex < loadedSynths.length; synthIndex++) {
-    loadedSynths[synthIndex].onaudioprocess(o);
+  var l = o.getChannelData(0);
+  var r = o.getChannelData(1);
+  for (var sample = 0; sample < o.length; sample++) {
+    t++;
+    var currentPhase = p.nextSample(noteToFreq(currentNote, 1));
+    l[sample] = sine(currentPhase);
+    r[sample] = sine(currentPhase);
   }
 };
 
 p.connect(c.destination);
 
-document.onkeydown = function (e) {};
+var currentNote = "C";
+
+document.onkeydown = function (e) {
+  var keycodes = [65, 87, 83, 68, 82, 70, 71, 90, 72, 85, 74, 73, 75];
+  if (keycodes.indexOf(e.keyCode) != -1) {
+    currentNote = notes[keycodes.indexOf(e.keyCode)];
+    console.log(currentNote);
+  }
+};
 document.onkeyup = function (e) {};

@@ -1,22 +1,24 @@
-var fft = function (data) {
-  console.log(data.length);
-  console.log(data);
+var fft = function (dataRe, dataIm) {
+  resultARe = new Float32Array(dataRe.length);
+  resultAIm = new Float32Array(dataRe.length);
+  if (!dataIm) dataIm = new Float32Array(dataRe.length);
+  var pairdist = n / 2;
+  var a = -2 * Math.PI;
+  for (var i = 0; i < pairdist; i++) {
+    var p = a * k / n;
+    var tIm = Math.sin(p);
+    var tRe = Math.cos(p);
+  }
 
-  var compExp = function (exR, exIm) {
-    var er = Math.exp(exR);
-    dst[0] = er * Math.cos(exIm);
-    dst[1] = er * Math.sin(exIm);
-    return dst;
-  };
+  for (var sw = dataRe.length / 2; sw > 1; sw /= 2) {
 
-  var lowerResult = function (g, u) {};
+    for (var collect = 0; collect < hn; collect++) {}
 
-  resultRe = new Float32Array(1024);
-  resultIm = new Float32Array(1024);
+  }
 
 
 
-  return resultRe;
+  return [resultRe, resultIm];
 };
 
 var fft2 = fft;
@@ -50,8 +52,8 @@ var rFFT = function (dataRe, dataIm) {
     var tRe = Math.cos(p);
     var t2Re = tRe * oddRe[k] - tIm * oddIm[k];
     var t2Im = tIm * oddRe[k] + tRe * oddIm[k];
-    dataRe[k] = t2Re + evenRe[k];
-    dataIm[k] = t2Im + evenIm[k];
+    dataRe[k] = evenRe[k] + t2Re;
+    dataIm[k] = evenIm[k] + t2Im;
     dataRe[k + hn] = evenRe[k] - t2Re;
     dataIm[k + hn] = evenIm[k] - t2Im;
   }
